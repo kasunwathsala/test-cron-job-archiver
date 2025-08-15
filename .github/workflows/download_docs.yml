@@ -1,0 +1,47 @@
+name: Document Archiver
+
+on:
+  schedule:
+    - cron: "*/15 * * * *" # every 15 minutes
+  workflow_dispatch:
+
+jobs:
+  run-archiver:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout storage repo
+        uses: actions/checkout@v4
+        with:
+          repository: yasandu0505/test-cron-job-archiver-storage
+          token: ${{ secrets.TARGET_REPO_PAT }}
+          path: storage-repo
+
+      - name: Checkout script repo
+        uses: actions/checkout@v4
+        with:
+          path: script-repo
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run archiver inside storage repo
+        run: |
+          cp script-repo/main.py storage-repo/
+          cd storage-repo
+          python main.py
+          rm main.py
+
+      - name: Commit and push updates to storage repo
+        run: |
+          cd storage-repo
+          git config user.name "yasandu0505"
+          git config user.email "yasanduyaka2005@gmail.com"
+          git add .
+          git commit -m "🔄 Auto-update archive - $(date '+%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
+          git push origin main --force
